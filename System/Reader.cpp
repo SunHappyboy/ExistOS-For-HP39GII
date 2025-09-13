@@ -556,27 +556,7 @@ public:
             vPortFree(this->display_lines);
         }
     }
-};
-
-void RunReadcpp( char* file_path) {
-    size_t len = strlen(file_path);
-    if (len < 5) return ;  // ".txt" 需要 4 个字符，至少还需要 1 个字符的文件名
-    
-    // 检查最后 4 个字符是否为 ".txt"
-     if(!strcmp(file_path + len - 4, ".txt") == 0)
-     {
-        return ;
-     };
-
-    auto curuidisp = new ReadDisplay(LCD_PIX_W, LCD_PIX_H, ll_disp_put_area);
-    
-    // 打开并显示文本文件
-    if (curuidisp->openTextFile(file_path)) {
-        curuidisp->displayCurrentPage();
-    } else {
-        curuidisp->draw_printf(0, 0, 12, 0, 255, "Failed to open file!");
-    }
-    
+    void ScanKey(){
     uint32_t key;
     uint32_t keyVal = 0;
 
@@ -594,14 +574,14 @@ void RunReadcpp( char* file_path) {
             delayRel = 0;
 
             if (delay == 1) {
-                bool continueto = curuidisp->keyMsg(keyVal, ReadDisplay::KEY_TRIG);
+                bool continueto = keyMsg(keyVal, ReadDisplay::KEY_TRIG);
                 if (!continueto) {
                     break;
                 }
             }
             if (delay > 5) {
                 if (delay % 5 == 0) {
-                    bool continueto = curuidisp->keyMsg(keyVal, ReadDisplay::KEY_LONG_PRESS);
+                    bool continueto = keyMsg(keyVal, ReadDisplay::KEY_LONG_PRESS);
                     if (!continueto) {
                         break;
                     }
@@ -616,7 +596,7 @@ void RunReadcpp( char* file_path) {
             delay = 0;
             delayRel++;
             if (delayRel == 1) {
-                bool continueto = curuidisp->keyMsg(keyVal, ReadDisplay::KEY_RELEASE);
+                bool continueto =keyMsg(keyVal, ReadDisplay::KEY_RELEASE);
                 if (!continueto) {
                     break;
                 }
@@ -630,6 +610,34 @@ void RunReadcpp( char* file_path) {
         if (cnt % 45 == 0) {
         }
     }
+    }
+};
+
+void RunReadcpp( char* file_path) {
+
+
+    
+     auto curuidisp = new ReadDisplay(LCD_PIX_W, LCD_PIX_H, ll_disp_put_area);
+    size_t len = strlen(file_path);
+    if (len < 5) 
+    {
+        curuidisp->draw_printf(0, 0, 12, 0, 255, "%s", file_path);
+    }
+    else  if(!strcmp(file_path + len - 4, ".txt") == 0)
+   {
+    // 检查最后 4 个字符是否为 ".txt"
+        curuidisp->draw_printf(0, 0, 12, 0, 255, "%s", file_path);
+
+   }
+    else
+    {    // 打开并显示文本文件
+    if (curuidisp->openTextFile(file_path)) {
+        curuidisp->displayCurrentPage();
+    } else {
+        curuidisp->draw_printf(0, 0, 12, 0, 255, "Failed to open file!");
+    }}
+    curuidisp->ScanKey();
+
     delete curuidisp;
 }
 
