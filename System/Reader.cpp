@@ -48,6 +48,7 @@ private:
     int lines_per_page;
     int chars_per_line;
     int current_page;
+    int font_size;        // 字体大小 (8, 12, 16)
     
     // 用于处理换行的显示行数组
     struct DisplayLine* display_lines;
@@ -61,7 +62,7 @@ private:
     }
 
 public:
-    ReadDisplay(int display_width, int display_height, void (*drawf)(uint8_t *buf, uint32_t x0, uint32_t y0, uint32_t x1, uint32_t y1)) {
+    ReadDisplay(int display_width, int display_height, void (*drawf)(uint8_t *buf, uint32_t x0, uint32_t y0, uint32_t x1, uint32_t y1), int fontsize = 12) {
         printf("Create UI Display.\n");
         this->disp_buf = (uint8_t *)pvPortMalloc(display_width * display_height);
         this->drawf = drawf;
@@ -74,8 +75,12 @@ public:
         this->file_path = NULL;
         this->file_content = NULL;
         this->file_size = 0;
-        this->lines_per_page = (display_height - 16) / 12;  // 为页码留出空间，使用12号字体
-        this->chars_per_line = (display_width - 10) / 6;    // 左右边距各5像素，使用6像素宽字体
+        this->font_size = fontsize;  // 设置字体大小
+        // 根据字体大小调整行数和字符数
+        int font_height = (fontsize == 8) ? 8 : (fontsize == 12) ? 12 : 16;
+        int font_width = (fontsize == 16) ? 8 : 6;
+        this->lines_per_page = (display_height - font_height - 4) / font_height;  // 为页码留出空间
+        this->chars_per_line = (display_width - 10) / font_width;    // 左右边距各5像素
         this->current_page = 0;
         this->display_lines = NULL;
         this->total_display_lines = 0;
@@ -257,8 +262,8 @@ public:
         
         // 显示文本内容
         for (int i = start_line; i < end_line; i++) {
-            int y_pos = (i - start_line) * 12;
-            if (y_pos + 12 <= this->disp_h - 16) {  // 为页码留出空间
+            int y_pos = (i - start_line) * this->font_size;
+            if (y_pos + this->font_size <= this->disp_h - this->font_size - 4) {  // 为页码留出空间
                 this->drawTextLine(5, y_pos, 
                                    this->display_lines[i].start, 
                                    this->display_lines[i].length);
@@ -271,7 +276,11 @@ public:
         
         char page_info[32];
         sprintf(page_info, "%d/%d", this->current_page + 1, total_pages);
-        this->drawTextLine((this->disp_w - strlen(page_info) * 6) / 2, this->disp_h - 12, page_info, strlen(page_info));
+        int page_font_width = (this->font_size == 16) ? 8 : 6;
+        this->drawTextLine((this->disp_w - strlen(page_info) * page_font_width) / 2, 
+                           this->disp_h - this->font_size, 
+                           page_info, 
+                           strlen(page_info));
         
         // 刷新显示
         this->drawf(this->disp_buf, 0, 0, this->disp_w - 1, this->disp_h - 1);
@@ -289,7 +298,7 @@ public:
         display_text[length] = '\0';
         
         // 使用draw_printf函数绘制文本，支持中文显示
-        this->draw_printf(x0, y0, 12, 0, 0xFF, "%s", display_text);
+        this->draw_printf(x0, y0, this->font_size, 0, 0xFF, "%s", display_text);
         
         vPortFree(display_text);
     }
@@ -616,17 +625,17 @@ public:
 void RunReadcpp( char* file_path) {
 
 
-    
-     auto curuidisp = new ReadDisplay(LCD_PIX_W, LCD_PIX_H, ll_disp_put_area);
+    int fontsize = 16;
+     auto curuidisp = new ReadDisplay(LCD_PIX_W, LCD_PIX_H, ll_disp_put_area, fontsize);
     size_t len = strlen(file_path);
     if (len < 5) 
     {
-        curuidisp->draw_printf(0, 0, 12, 0, 255, "%s", file_path);
+        curuidisp->draw_printf(0, 0, fontsize, 0, 255, "%s", file_path);
     }
-    else  if(!strcmp(file_path + len - 4, ".txt") == 0)
+    else  if(strcmp(file_path + len - 4, ".txt") != 0)
    {
     // 检查最后 4 个字符是否为 ".txt"
-        curuidisp->draw_printf(0, 0, 12, 0, 255, "%s", file_path);
+        curuidisp->draw_printf(0, 0, fontsize, 0, 255, "%s", file_path);
 
    }
     else
@@ -634,7 +643,7 @@ void RunReadcpp( char* file_path) {
     if (curuidisp->openTextFile(file_path)) {
         curuidisp->displayCurrentPage();
     } else {
-        curuidisp->draw_printf(0, 0, 12, 0, 255, "Failed to open file!");
+        curuidisp->draw_printf(0, 0, fontsize, 0, 255, "Failed to open file!");
     }}
     curuidisp->ScanKey();
 
