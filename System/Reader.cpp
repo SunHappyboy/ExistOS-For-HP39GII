@@ -281,13 +281,17 @@ public:
     void drawTextLine(uint32_t x0, uint32_t y0, const char *text, int length) {
         if (text == NULL || length <= 0) return;
         
-        int x = x0;
-        for (int i = 0; i < length && x < this->disp_w - 5; i++) {
-            if (text[i] >= 32 && text[i] <= 126) {  // 可打印ASCII字符
-                this->draw_char_ascii(x, y0, text[i], 12, 0, 0xFF);
-                x += 6;
-            }
-        }
+        // 创建临时字符串用于显示
+        char* display_text = (char*)pvPortMalloc(length + 1);
+        if (display_text == NULL) return;
+        
+        strncpy(display_text, text, length);
+        display_text[length] = '\0';
+        
+        // 使用draw_printf函数绘制文本，支持中文显示
+        this->draw_printf(x0, y0, 12, 0, 0xFF, "%s", display_text);
+        
+        vPortFree(display_text);
     }
     
     // 翻页处理
