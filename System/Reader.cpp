@@ -1,5 +1,3 @@
-
-
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -226,33 +224,11 @@ public:
         // printf("GBK PRINT:%02x\n", c);
         this->drawf(&this->disp_buf[y0 * this->disp_w], 0, y0, this->disp_w - 1, y0 + 16);
     }
-    int draw_printf(uint32_t x0, uint32_t y0, uint8_t fontSize, uint8_t fg, int16_t bg, const char *format, ...) {
-        va_list aptr;
-        int ret;
-
-        char buffer[256];
-
-        va_start(aptr, format);
-        ret = vsprintf(buffer, format, aptr);
-        va_end(aptr);
-
-        for (int i = 0, x = x0; (i < sizeof(buffer)) && (buffer[i]); i++) {
-            if (buffer[i] < 0x80) {
-                draw_char_ascii(x, y0, buffer[i], fontSize, fg, bg);
-                x += fontSize == 16 ? 8 : 6;
-                if (x > disp_w) {
-                    break;
-                }
-            } else {
-                draw_char_GBK16(x, y0, buffer[i + 1] | (buffer[i] << 8), fg, bg);
-                x += 16;
-                if (x > disp_w) {
-                    break;
-                }
-                i++;
-            }
-        }
-        return (ret);
+    int draw_printf(uint32_t x0, uint32_t y0, uint8_t fontSize, uint8_t fg, int16_t bg, const char *format, ...);
+    
+    // 添加新的drawTextLine方法声明
+    void drawTextLine(uint32_t x0, uint32_t y0, const char* text, uint8_t fontSize, uint8_t fg, int16_t bg) {
+        draw_printf(x0, y0, fontSize, fg, bg, "%s", text);
     }
 
     bool keyMsg(uint32_t key, int state) {
