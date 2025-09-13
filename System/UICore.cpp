@@ -583,6 +583,17 @@ void keyMsg(uint32_t key, int state) {
 
                 drawPage(curPage);
             }
+            else if(curPage==2)
+            {
+                 if (*filesCount > 0) {
+                    if (dirItemInfos[(*pageNow - 1) * 5 + *selectedItem - 1]) {
+                        void StartReader(char * );
+                        StartReader(pathNow);
+
+                    } 
+            
+                }
+            }
             break;
         }
 

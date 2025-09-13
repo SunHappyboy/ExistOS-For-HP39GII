@@ -99,7 +99,7 @@ public:
     }
 
     // 打开并加载文本文件
-    bool openTextFile(const TCHAR *path) {
+    bool openTextFile( TCHAR *path) {
         FIL fil;
         FRESULT res;
         
@@ -558,7 +558,15 @@ public:
     }
 };
 
-void RunReadcpp(const TCHAR* file_path) {
+void RunReadcpp( char* file_path) {
+    size_t len = strlen(file_path);
+    if (len < 5) return ;  // ".txt" 需要 4 个字符，至少还需要 1 个字符的文件名
+    
+    // 检查最后 4 个字符是否为 ".txt"
+     if(!strcmp(file_path + len - 4, ".txt") == 0)
+     {
+        return ;
+     };
 
     auto curuidisp = new ReadDisplay(LCD_PIX_W, LCD_PIX_H, ll_disp_put_area);
     

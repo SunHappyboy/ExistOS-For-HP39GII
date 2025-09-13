@@ -131,6 +131,21 @@ void StartKhiCAS() {
     xTaskCreate(khicasTask, "KhiCAS", KhiCAS_STACK_SIZE, NULL, configMAX_PRIORITIES - 3, (NULL));
 }
 
+void ReaderTask(void *pvParameters) {
+    char *file_path = (char*)pvParameters;
+    SystemUISuspend();
+    void RunReadcpp(const char* );
+
+    RunReadcpp(file_path);
+
+    SystemUIResume();
+    vTaskDelete(NULL);
+}
+
+void StartReader(char  *txtpath) {
+    xTaskCreate(ReaderTask, "Reader", KhiCAS_STACK_SIZE, (void*)txtpath, configMAX_PRIORITIES - 3, (NULL));
+}
+
 void main_thread() {
 
     // printf("R13:%08x\n", get_stack());
