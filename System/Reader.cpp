@@ -50,6 +50,10 @@ private:
     int current_page;
     int font_size;        // 字体大小 (8, 12, 16)
     
+    // 用于处理跳转到指定页码的功能
+    bool input_page_mode;      // 是否处于输入页码模式
+    char input_page_buffer[16]; // 输入的页码缓冲区
+    
     // 用于处理换行的显示行数组
     struct DisplayLine* display_lines;
     int total_display_lines;
@@ -84,6 +88,10 @@ public:
         this->current_page = 0;
         this->display_lines = NULL;
         this->total_display_lines = 0;
+        
+        // 初始化页码输入相关变量
+        this->input_page_mode = false;
+        memset(this->input_page_buffer, 0, sizeof(this->input_page_buffer));
     }
 
     void emergencyBuffer() {
@@ -398,7 +406,77 @@ public:
         this->current_page = new_line / this->lines_per_page;
         this->displayCurrentPage();
     }
+    
+    // 跳转到指定页码
+    void goToPage(int page) {
+        int total_pages = (this->total_display_lines + this->lines_per_page - 1) / this->lines_per_page;
+        if (total_pages == 0) total_pages = 1;
+        
+        // 页码范围检查
+        if (page >= 1 && page <= total_pages) {
+            this->current_page = page - 1;  // 内部页码从0开始
+            this->displayCurrentPage();
+        }
+    }
+    
+    // 开始输入页码模式
+    void startPageInput() {
+        this->input_page_mode = true;
+        memset(this->input_page_buffer, 0, sizeof(this->input_page_buffer));
+        this->displayInputPagePrompt();
+    }
+    
+    // 结束输入页码模式
+    void endPageInput() {
+        this->input_page_mode = false;
+        int page = atoi(this->input_page_buffer);
+        this->goToPage(page);
+        this->displayCurrentPage();  // 重新显示当前页内容
+    }
+    
+    // 显示输入页码提示
+    void displayInputPagePrompt() {
+        // 清空显示缓冲区
+        memset(this->disp_buf, 0xff, this->disp_w * this->disp_h);
+        
+        // 显示提示信息
+        this->draw_printf(0, 0, this->font_size, 0, 0xFF, "Enter page number:");
+        
+        // 显示当前已输入的页码
+        if (strlen(this->input_page_buffer) > 0) {
+            this->draw_printf(0, this->font_size * 2, this->font_size, 0, 0xFF, 
+                             "%s", this->input_page_buffer);
+        }
+        
+        // 显示提示信息
+        this->draw_printf(0, this->disp_h - this->font_size, this->font_size, 0, 0xFF, 
+                         "Enter=Go Backspace=Del");
+        
+        // 刷新显示
+        this->drawf(this->disp_buf, 0, 0, this->disp_w - 1, this->disp_h - 1);
+    }
+    
+    // 添加数字到输入缓冲区
+    void addDigitToPageInput(char digit) {
+        size_t len = strlen(this->input_page_buffer);
+        if (len < sizeof(this->input_page_buffer) - 1) {
+            this->input_page_buffer[len] = digit;
+            this->input_page_buffer[len + 1] = '\0';
+            this->displayInputPagePrompt();
+        }
+    }
+    
+    // 从输入缓冲区删除最后一个字符
+    void removeDigitFromPageInput() {
+        size_t len = strlen(this->input_page_buffer);
+        if (len > 0) {
+            this->input_page_buffer[len - 1] = '\0';
+            this->displayInputPagePrompt();
+        }
+    }
+    
 
+    
     void draw_point(uint32_t x, uint32_t y, uint8_t c) {
         buf_set(x, y, c);
         this->drawf(&this->disp_buf[y * this->disp_w], 0, y, this->disp_w - 1, y);
@@ -587,6 +665,57 @@ public:
     bool keyMsg(uint32_t key, int state) {
         switch (state) {
         case KEY_RELEASE:
+            // 如果处于输入页码模式
+            if (this->input_page_mode) {
+                if (key == KEY_ENTER) {
+                    // ENTER键确认跳转
+                    this->endPageInput();
+                    return true;
+                } else if (key == KEY_BACKSPACE) {
+                    // BACKSPACE键删除最后一个字符
+                    this->removeDigitFromPageInput();
+                    return true;
+                }
+                
+                // 处理数字键输入
+                switch (key) {
+                case KEY_0:
+                    this->addDigitToPageInput('0');
+                    return true;
+                case KEY_1:
+                    this->addDigitToPageInput('1');
+                    return true;
+                case KEY_2:
+                    this->addDigitToPageInput('2');
+                    return true;
+                case KEY_3:
+                    this->addDigitToPageInput('3');
+                    return true;
+                case KEY_4:
+                    this->addDigitToPageInput('4');
+                    return true;
+                case KEY_5:
+                    this->addDigitToPageInput('5');
+                    return true;
+                case KEY_6:
+                    this->addDigitToPageInput('6');
+                    return true;
+                case KEY_7:
+                    this->addDigitToPageInput('7');
+                    return true;
+                case KEY_8:
+                    this->addDigitToPageInput('8');
+                    return true;
+                case KEY_9:
+                    this->addDigitToPageInput('9');
+                    return true;
+                }
+                
+                // 其他按键不处理
+                return true;
+            }
+            
+            // 正常阅读模式下的按键处理
             if (key == KEY_ON)
                 return false;
             else if (key == KEY_LEFT)
@@ -597,6 +726,11 @@ public:
                 this->prevHalfPage();  // 上键翻上半页
             else if (key == KEY_DOWN)
                 this->nextHalfPage();  // 下键翻下半页
+            else if (key == KEY_F3) {
+                // F4键进入页码输入模式
+                this->startPageInput();
+                return true;
+            }
             return true;
         default:
             return true;
