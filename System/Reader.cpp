@@ -187,8 +187,39 @@ public:
                 line_length--;
             }
             
-            // 根据屏幕宽度计算需要的显示行数
-            int lines_needed = (line_length + this->chars_per_line - 1) / this->chars_per_line;
+            // 根据屏幕宽度计算需要的显示行数（考虑GBK汉字）
+            int lines_needed = 0;
+            int current_pos = 0;
+            
+            while (current_pos < line_length) {
+                // 计算当前行可以容纳的字符数（考虑GBK汉字）
+                int chars_in_line = 0;
+                int temp_pos = current_pos;
+                
+                while (chars_in_line < this->chars_per_line && temp_pos < line_length) {
+                    // 检查是否是GBK汉字的第一个字节
+                    if ((temp_pos + 1 < line_length) && 
+                        (unsigned char)(ptr[temp_pos]) > 0x80 && 
+                        (unsigned char)(ptr[temp_pos + 1]) > 0x40) {
+                        // 是GBK汉字，需要占用2个字符位置
+                        if (chars_in_line + 2 <= this->chars_per_line) {
+                            chars_in_line += 2;
+                            temp_pos += 2;
+                        } else {
+                            // 汉字不能分割，移到下一行
+                            break;
+                        }
+                    } else {
+                        // 是ASCII字符或特殊字符
+                        chars_in_line++;
+                        temp_pos++;
+                    }
+                }
+                
+                lines_needed++;
+                current_pos = temp_pos;
+            }
+            
             if (lines_needed == 0) lines_needed = 1; // 至少需要一行（空行情况）
             
             this->total_display_lines += lines_needed;
@@ -226,19 +257,40 @@ public:
                 this->display_lines[display_line_index].length = 0;
                 display_line_index++;
             } else {
-                // 如果行长度小于等于每行最大字符数，直接添加
-                if (line_length <= this->chars_per_line) {
-                    this->display_lines[display_line_index].start = ptr;
-                    this->display_lines[display_line_index].length = line_length;
-                    display_line_index++;
-                } else {
-                    // 否则，需要分成多行显示
-                    for (int i = 0; i < line_length; i += this->chars_per_line) {
-                        this->display_lines[display_line_index].start = ptr + i;
-                        int remaining = line_length - i;
-                        this->display_lines[display_line_index].length = (remaining > this->chars_per_line) ? this->chars_per_line : remaining;
-                        display_line_index++;
+                // 处理非空行，考虑GBK汉字分行
+                int current_pos = 0;
+                
+                while (current_pos < line_length && display_line_index < this->total_display_lines) {
+                    // 计算当前行可以容纳的字符数（考虑GBK汉字）
+                    int chars_in_line = 0;
+                    int temp_pos = current_pos;
+                    
+                    while (chars_in_line < this->chars_per_line && temp_pos < line_length) {
+                        // 检查是否是GBK汉字的第一个字节
+                        if ((temp_pos + 1 < line_length) && 
+                            (unsigned char)(ptr[temp_pos]) > 0x80 && 
+                            (unsigned char)(ptr[temp_pos + 1]) > 0x40) {
+                            // 是GBK汉字，需要占用2个字符位置
+                            if (chars_in_line + 2 <= this->chars_per_line) {
+                                chars_in_line += 2;
+                                temp_pos += 2;
+                            } else {
+                                // 汉字不能分割，移到下一行
+                                break;
+                            }
+                        } else {
+                            // 是ASCII字符或特殊字符
+                            chars_in_line++;
+                            temp_pos++;
+                        }
                     }
+                    
+                    // 设置当前显示行
+                    this->display_lines[display_line_index].start = ptr + current_pos;
+                    this->display_lines[display_line_index].length = temp_pos - current_pos;
+                    display_line_index++;
+                    
+                    current_pos = temp_pos;
                 }
             }
             
